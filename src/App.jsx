@@ -1,17 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Github, Linkedin, Mail, ChevronDown, ExternalLink, Download, Calendar, MapPin, Trophy, X, FileText } from 'lucide-react';
+import { Github, Linkedin, Mail, ChevronDown, ExternalLink, Download, Calendar, MapPin, Trophy, X, FileText, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- CONFIGURATION ---
-// PASTE YOUR FORMSPREE ID HERE
 const FORMSPREE_ID = "xlgeranj"; 
 
 // --- Components ---
 
-const NavItem = ({ href, children }) => (
+const NavItem = ({ href, children, onClick }) => (
   <a 
     href={href} 
-    className="text-gray-500 hover:text-white transition-colors duration-300 text-xs md:text-sm tracking-[0.2em] uppercase"
+    onClick={onClick}
+    className="text-gray-500 hover:text-white transition-colors duration-300 text-xs md:text-sm tracking-[0.2em] uppercase block py-4 md:py-0"
   >
     {children}
   </a>
@@ -170,7 +170,8 @@ function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentPdf, setCurrentPdf] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
-  const [status, setStatus] = useState(null); // 'submitting' | 'success' | 'error' | null
+  const [status, setStatus] = useState(null); 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // NEW STATE FOR MOBILE MENU
 
   const openPdf = (url) => {
     setCurrentPdf(url);
@@ -183,27 +184,20 @@ function App() {
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
-    
     if (FORMSPREE_ID === "YOUR_FORMSPREE_ID") {
       alert("Please update the FORMSPREE_ID in src/App.jsx with your actual ID from formspree.io");
       return;
     }
-
     setStatus('submitting');
-
     try {
       const response = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(formData)
       });
-
       if (response.ok) {
         setStatus('success');
-        setFormData({ name: '', email: '', message: '' }); // Clear form
+        setFormData({ name: '', email: '', message: '' });
       } else {
         setStatus('error');
       }
@@ -230,7 +224,7 @@ function App() {
         this.x = x;
         this.y = y;
         this.radius = 1;
-        this.opacity = 1.0; // CHANGED: Brighter explosion (was 0.8)
+        this.opacity = 1.0; 
         this.growthSpeed = 0.4; 
       }
       update() {
@@ -241,7 +235,7 @@ function App() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity})`;
-        ctx.lineWidth = 1; // CHANGED: Slightly thicker line for visibility (was 0.5)
+        ctx.lineWidth = 1; 
         ctx.stroke();
       }
     }
@@ -278,28 +272,21 @@ function App() {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.update();
-        p.draw();
-      });
+      particles.forEach(p => { p.update(); p.draw(); });
       ripples.forEach((r, index) => {
-        r.update();
-        r.draw();
+        r.update(); r.draw();
         if (r.opacity <= 0) ripples.splice(index, 1);
       });
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
-          const p1 = particles[i];
-          const p2 = particles[j];
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
+          const p1 = particles[i]; const p2 = particles[j];
+          const dx = p1.x - p2.x; const dy = p1.y - p2.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance < 100) {
             ctx.beginPath();
             ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 - distance/2000})`;
             ctx.lineWidth = 0.5;
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
+            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
             ctx.stroke();
           }
           const minDistance = p1.size + p2.size + 2; 
@@ -309,16 +296,11 @@ function App() {
             const angle = Math.atan2(dy, dx);
             const moveX = Math.cos(angle) * overlap * 0.5;
             const moveY = Math.sin(angle) * overlap * 0.5;
-            p1.x += moveX;
-            p1.y += moveY;
-            p2.x -= moveX;
-            p2.y -= moveY;
-            const tempVX = p1.speedX;
-            const tempVY = p1.speedY;
-            p1.speedX = p2.speedX;
-            p1.speedY = p2.speedY;
-            p2.speedX = tempVX;
-            p2.speedY = tempVY;
+            p1.x += moveX; p1.y += moveY;
+            p2.x -= moveX; p2.y -= moveY;
+            const tempVX = p1.speedX; const tempVY = p1.speedY;
+            p1.speedX = p2.speedX; p1.speedY = p2.speedY;
+            p2.speedX = tempVX; p2.speedY = tempVY;
           }
         }
       }
@@ -336,7 +318,7 @@ function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-black text-gray-300 selection:bg-white selection:text-black">
+    <div className="relative min-h-screen bg-black text-gray-300 selection:bg-white selection:text-black overflow-x-hidden">
       
       {/* Background Canvas */}
       <canvas 
@@ -355,6 +337,33 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* MOBILE MENU OVERLAY (NEW) */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center space-y-8"
+          >
+             <button 
+                onClick={() => setMobileMenuOpen(false)} 
+                className="absolute top-6 right-6 text-gray-500 hover:text-white"
+              >
+                <X size={30} />
+              </button>
+              
+              <div className="flex flex-col gap-8 text-center">
+                <NavItem href="#home" onClick={() => setMobileMenuOpen(false)}>Home</NavItem>
+                <NavItem href="#education" onClick={() => setMobileMenuOpen(false)}>Logs</NavItem>
+                <NavItem href="#awards" onClick={() => setMobileMenuOpen(false)}>Honors</NavItem>
+                <NavItem href="#projects" onClick={() => setMobileMenuOpen(false)}>Projects</NavItem>
+                <NavItem href="#contact" onClick={() => setMobileMenuOpen(false)}>Contact</NavItem>
+              </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
@@ -366,7 +375,13 @@ function App() {
             <NavItem href="#projects">Projects</NavItem>
             <NavItem href="#contact">Contact</NavItem>
           </div>
-          <div className="md:hidden text-xs text-gray-500 tracking-widest">MENU</div>
+          {/* MOBILE MENU BUTTON (UPDATED) */}
+          <button 
+            className="md:hidden text-xs text-gray-500 tracking-widest flex items-center gap-2"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+             MENU <Menu size={16}/>
+          </button>
         </div>
       </nav>
 
@@ -376,7 +391,7 @@ function App() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1 }}
-          className="text-center"
+          className="text-center w-full"
         >
           
           <div className="relative inline-block mb-6">
@@ -394,14 +409,15 @@ function App() {
             </span>
           </div>
           
-          <div className="h-6 md:h-8 overflow-hidden mb-12">
+          <div className="h-6 md:h-8 overflow-hidden mb-12 w-full px-2">
             <motion.p 
               initial={{ width: 0 }}
               animate={{ width: "100%" }}
               transition={{ duration: 3.5, ease: "linear" }}
-              className="text-xs md:text-sm text-gray-400 max-w-lg mx-auto leading-loose tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden border-r-2 border-white pr-2"
+              /* CHANGED: Adjusted text size and tracking for mobile to prevent cutoff */
+              className="text-[10px] md:text-sm text-gray-400 max-w-lg mx-auto leading-loose tracking-widest md:tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden border-r-2 border-white pr-2"
             >
-              Software Engineer <span className="text-white mx-2">|</span> Student <span className="text-white mx-2">|</span> Minimalist
+              Software Engineer <span className="text-white mx-1 md:mx-2">|</span> Student <span className="text-white mx-1 md:mx-2">|</span> Minimalist
             </motion.p>
           </div>
           

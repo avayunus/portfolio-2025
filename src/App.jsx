@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Github, Linkedin, Mail, ChevronDown, ExternalLink, Download, Calendar, MapPin, Trophy, X, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// CONFIGURATION
+// --- CONFIGURATION ---
+// PASTE YOUR FORMSPREE ID HERE
 const FORMSPREE_ID = "xlgeranj"; 
 
-// Components 
+// --- Components ---
 
 const NavItem = ({ href, children }) => (
   <a 
@@ -111,7 +112,7 @@ const ProjectCard = ({ title, desc, tags, link }) => {
   );
 };
 
-// PDF Modal Component
+// --- PDF Modal Component ---
 const PdfModal = ({ isOpen, onClose, pdfUrl }) => {
   if (!isOpen) return null;
 
@@ -160,7 +161,7 @@ const PdfModal = ({ isOpen, onClose, pdfUrl }) => {
   );
 };
 
-// Main App 
+// --- Main App ---
 
 function App() {
   const canvasRef = useRef(null);
@@ -180,7 +181,6 @@ function App() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle Form Submission via Formspree (No redirect) 
   const handleSendEmail = async (e) => {
     e.preventDefault();
     
@@ -230,7 +230,7 @@ function App() {
         this.x = x;
         this.y = y;
         this.radius = 1;
-        this.opacity = 0.8; 
+        this.opacity = 1.0; // CHANGED: Brighter explosion (was 0.8)
         this.growthSpeed = 0.4; 
       }
       update() {
@@ -241,7 +241,7 @@ function App() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity})`;
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 1; // CHANGED: Slightly thicker line for visibility (was 0.5)
         ctx.stroke();
       }
     }
@@ -253,7 +253,7 @@ function App() {
         this.size = Math.random() * 2 + 0.5; 
         this.speedX = (Math.random() - 0.5) * 0.15; 
         this.speedY = (Math.random() - 0.5) * 0.15;
-        this.opacity = Math.random() * 0.4 + 0.1;
+        this.opacity = Math.random() * 0.5 + 0.3;
       }
       update() {
         this.x += this.speedX;
@@ -378,7 +378,6 @@ function App() {
           transition={{ duration: 1 }}
           className="text-center"
         >
-          <div className="mb-4 text-xs tracking-[0.5em] text-gray-500 uppercase">System Online</div>
           
           <div className="relative inline-block mb-6">
             <h1 className="text-4xl md:text-8xl text-white font-thin tracking-widest">
@@ -499,7 +498,7 @@ function App() {
         </div>
       </Section>
 
-      {/* Projects Section - Added JustNotes */}
+      {/* Projects Section */}
       <Section id="projects" title="04_PROJECTS">
         <div className="grid md:grid-cols-2 gap-6">
           <ProjectCard 
@@ -557,7 +556,7 @@ function App() {
         </div>
       </Section>
 
-      {/* Contact Section - NOW FUNCTIONAL */}
+      {/* Contact Section */}
       <Section id="contact" title="05_CONTACT">
         <div className="max-w-xl mx-auto w-full border border-white/10 p-8 backdrop-blur-sm bg-black/30">
           <p className="text-center text-gray-500 mb-8 font-light text-sm tracking-widest">

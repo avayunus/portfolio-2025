@@ -235,6 +235,12 @@ function App() {
     let particles = [];
     let ripples = [];
     let shootingStars = [];
+    let lastTime = 0;
+    const targetFPS = 60;
+    const frameInterval = 1000 / targetFPS;
+    
+    const isMobile = window.innerWidth < 768;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -247,12 +253,12 @@ function App() {
         this.x = x;
         this.y = y;
         this.radius = 1;
-        this.opacity = 1.0; 
-        this.growthSpeed = 0.4; 
+        this.opacity = 0.8; 
+        this.growthSpeed = 24; 
       }
-      update() {
-        this.radius += this.growthSpeed;
-        this.opacity -= 0.02; 
+      update(delta) {
+        this.radius += this.growthSpeed * delta;
+        this.opacity -= 1.2 * delta; 
       }
       draw() {
         ctx.beginPath();
@@ -271,14 +277,14 @@ function App() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height * 0.5;
         this.length = Math.random() * 80 + 40;
-        this.speed = Math.random() * 8 + 6;
+        this.speed = Math.random() * 300 + 200;
         this.opacity = 1;
         this.angle = Math.PI / 4 + (Math.random() - 0.5) * 0.2;
       }
-      update() {
-        this.x += Math.cos(this.angle) * this.speed;
-        this.y += Math.sin(this.angle) * this.speed;
-        this.opacity -= 0.015;
+      update(delta) {
+        this.x += Math.cos(this.angle) * this.speed * delta;
+        this.y += Math.sin(this.angle) * this.speed * delta;
+        this.opacity -= 0.8 * delta;
       }
       draw() {
         const tailX = this.x - Math.cos(this.angle) * this.length;
@@ -300,18 +306,18 @@ function App() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
         this.size = Math.random() * 2 + 0.5; 
-        this.speedX = (Math.random() - 0.5) * 0.15; 
-        this.speedY = (Math.random() - 0.5) * 0.15;
+        this.speedX = (Math.random() - 0.5) * 8;
+        this.speedY = (Math.random() - 0.5) * 8;
         this.opacity = Math.random() * 0.5 + 0.3;
-        this.twinkleSpeed = Math.random() * 0.02 + 0.005;
+        this.twinkleSpeed = Math.random() * 0.8 + 0.3;
         this.twinkleDirection = Math.random() > 0.5 ? 1 : -1;
       }
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
+      update(delta) {
+        this.x += this.speedX * delta;
+        this.y += this.speedY * delta;
         if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
         if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-        this.opacity += this.twinkleSpeed * this.twinkleDirection;
+        this.opacity += this.twinkleSpeed * this.twinkleDirection * delta;
         if (this.opacity > 0.8 || this.opacity < 0.2) {
           this.twinkleDirection *= -1;
         }
@@ -326,63 +332,80 @@ function App() {
       particles = [];
       ripples = [];
       shootingStars = [];
-      const particleCount = window.innerWidth < 768 ? 80 : 180;
+      const particleCount = isMobile ? 40 : 120;
       for (let i = 0; i < particleCount; i++) {
         particles.push(new Particle());
       }
     };
 
-    const animate = () => {
+    const animate = (currentTime) => {
+      if (prefersReducedMotion) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => p.draw());
+        return;
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+      
+      const elapsed = currentTime - lastTime;
+      if (elapsed < frameInterval) return;
+      
+      const delta = Math.min(elapsed / 1000, 0.1);
+      lastTime = currentTime - (elapsed % frameInterval);
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      if (Math.random() < 0.003) {
+      if (Math.random() < 0.15 * delta) {
         shootingStars.push(new ShootingStar());
       }
       
       shootingStars.forEach((star, index) => {
-        star.update();
+        star.update(delta);
         star.draw();
         if (star.opacity <= 0) shootingStars.splice(index, 1);
       });
       
-      particles.forEach(p => { p.update(); p.draw(); });
+      particles.forEach(p => { p.update(delta); p.draw(); });
+      
       ripples.forEach((r, index) => {
-        r.update(); r.draw();
+        r.update(delta); r.draw();
         if (r.opacity <= 0) ripples.splice(index, 1);
       });
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const p1 = particles[i]; const p2 = particles[j];
-          const dx = p1.x - p2.x; const dy = p1.y - p2.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 100) {
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 - distance/2000})`;
-            ctx.lineWidth = 0.5;
-            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-          const minDistance = p1.size + p2.size + 2; 
-          if (distance < minDistance) {
-            ripples.push(new Ripple((p1.x + p2.x)/2, (p1.y + p2.y)/2));
-            const overlap = minDistance - distance;
-            const angle = Math.atan2(dy, dx);
-            const moveX = Math.cos(angle) * overlap * 0.5;
-            const moveY = Math.sin(angle) * overlap * 0.5;
-            p1.x += moveX; p1.y += moveY;
-            p2.x -= moveX; p2.y -= moveY;
-            const tempVX = p1.speedX; const tempVY = p1.speedY;
-            p1.speedX = p2.speedX; p1.speedY = p2.speedY;
-            p2.speedX = tempVX; p2.speedY = tempVY;
+      
+      if (!isMobile) {
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const p1 = particles[i]; const p2 = particles[j];
+            const dx = p1.x - p2.x; const dy = p1.y - p2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 100) {
+              ctx.beginPath();
+              ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 - distance/2000})`;
+              ctx.lineWidth = 0.5;
+              ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+            const minDistance = p1.size + p2.size + 2; 
+            if (distance < minDistance) {
+              ripples.push(new Ripple((p1.x + p2.x)/2, (p1.y + p2.y)/2));
+              const overlap = minDistance - distance;
+              const angle = Math.atan2(dy, dx);
+              const moveX = Math.cos(angle) * overlap * 0.5;
+              const moveY = Math.sin(angle) * overlap * 0.5;
+              p1.x += moveX; p1.y += moveY;
+              p2.x -= moveX; p2.y -= moveY;
+              const tempVX = p1.speedX; const tempVY = p1.speedY;
+              p1.speedX = p2.speedX; p1.speedY = p2.speedY;
+              p2.speedX = tempVX; p2.speedY = tempVY;
+            }
           }
         }
       }
-      animationFrameId = requestAnimationFrame(animate);
     };
 
     window.addEventListener('resize', resize);
     resize();
-    animate();
+    animationFrameId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('resize', resize);
@@ -405,10 +428,10 @@ function App() {
         className="fixed top-0 left-0 w-full h-full pointer-events-none z-0"
       />
 
-      {/* Nebula Glow Effect */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[150px]"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[150px]"></div>
+      {/* Nebula Glow Effect - optimized for cross-browser */}
+      <div className="fixed inset-0 pointer-events-none z-0 hidden md:block">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/8 rounded-full blur-[100px]"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-900/8 rounded-full blur-[100px]"></div>
       </div>
 
       {/* PDF POPUP MODAL */}

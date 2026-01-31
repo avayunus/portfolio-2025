@@ -18,7 +18,7 @@ const NavItem = ({ href, children, onClick }) => (
 );
 
 const Section = ({ id, title, children }) => (
-  <section id={id} className="min-h-screen flex flex-col justify-center px-6 py-24 max-w-5xl mx-auto relative z-10">
+  <section id={id} className="min-h-screen flex flex-col justify-center px-6 py-24 max-w-5xl mx-auto relative z-10 scroll-mt-20">
     <motion.h2 
       initial={{ opacity: 0, x: -50 }}
       whileInView={{ opacity: 1, x: 0 }}
@@ -83,7 +83,7 @@ const AchievementItem = ({ title, org, date, desc, pdfLink, onPreview }) => (
   </motion.div>
 );
 
-const ProjectCard = ({ title, desc, tags, link }) => {
+const ProjectCard = ({ title, desc, tags, link, featured }) => {
   const Component = link ? motion.a : motion.div;
   const props = link ? { href: link, target: "_blank", rel: "noopener noreferrer" } : {};
 
@@ -94,8 +94,17 @@ const ProjectCard = ({ title, desc, tags, link }) => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className={`block border border-white/10 bg-black/50 backdrop-blur-sm p-6 transition-all duration-300 group ${link ? 'hover:border-white/40 cursor-pointer' : 'cursor-default'}`}
+      className={`block border bg-black/50 backdrop-blur-sm p-6 transition-all duration-300 group relative overflow-hidden ${
+        featured 
+          ? 'border-purple-500/30 hover:border-purple-400/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]' 
+          : 'border-white/10 hover:border-white/40'
+      } ${link ? 'hover:bg-white/5 cursor-pointer' : 'cursor-default'}`}
     >
+      {featured && (
+        <div className="absolute top-0 right-0 bg-purple-500/20 text-purple-300 text-[8px] tracking-widest px-2 py-1 uppercase">
+          Featured
+        </div>
+      )}
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-xl tracking-wider group-hover:text-white text-gray-200 transition-colors">{title}</h3>
         {link && <ExternalLink size={18} className="text-gray-600 group-hover:text-white transition-colors" />}
@@ -103,7 +112,7 @@ const ProjectCard = ({ title, desc, tags, link }) => {
       <p className="text-gray-500 text-sm leading-relaxed mb-6 font-thin">{desc}</p>
       <div className="flex flex-wrap gap-2">
         {tags.map((tag, i) => (
-          <span key={i} className="text-[10px] uppercase tracking-wider text-gray-400 border border-white/10 px-2 py-1">
+          <span key={i} className="text-[10px] uppercase tracking-wider text-gray-400 border border-white/10 px-2 py-1 group-hover:border-white/20 transition-colors">
             {tag}
           </span>
         ))}
@@ -111,6 +120,19 @@ const ProjectCard = ({ title, desc, tags, link }) => {
     </Component>
   );
 };
+
+const SkillBadge = ({ skill, index }) => (
+  <motion.div 
+    initial={{ opacity: 0, scale: 0.8 }}
+    whileInView={{ opacity: 1, scale: 1 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.3, delay: index * 0.05 }}
+    whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+    className="border border-white/10 p-6 text-center hover:border-white transition-all duration-300 cursor-default"
+  >
+    <span className="text-xs tracking-[0.2em] text-gray-300">{skill}</span>
+  </motion.div>
+);
 
 // --- PDF Modal Component ---
 const PdfModal = ({ isOpen, onClose, pdfUrl }) => {
@@ -212,6 +234,7 @@ function App() {
     let animationFrameId;
     let particles = [];
     let ripples = [];
+    let shootingStars = [];
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -240,6 +263,38 @@ function App() {
       }
     }
 
+    class ShootingStar {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height * 0.5;
+        this.length = Math.random() * 80 + 40;
+        this.speed = Math.random() * 8 + 6;
+        this.opacity = 1;
+        this.angle = Math.PI / 4 + (Math.random() - 0.5) * 0.2;
+      }
+      update() {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+        this.opacity -= 0.015;
+      }
+      draw() {
+        const tailX = this.x - Math.cos(this.angle) * this.length;
+        const tailY = this.y - Math.sin(this.angle) * this.length;
+        const gradient = ctx.createLinearGradient(this.x, this.y, tailX, tailY);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${this.opacity})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(tailX, tailY);
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
     class Particle {
       constructor() {
         this.x = Math.random() * canvas.width;
@@ -248,12 +303,18 @@ function App() {
         this.speedX = (Math.random() - 0.5) * 0.15; 
         this.speedY = (Math.random() - 0.5) * 0.15;
         this.opacity = Math.random() * 0.5 + 0.3;
+        this.twinkleSpeed = Math.random() * 0.02 + 0.005;
+        this.twinkleDirection = Math.random() > 0.5 ? 1 : -1;
       }
       update() {
         this.x += this.speedX;
         this.y += this.speedY;
         if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
         if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+        this.opacity += this.twinkleSpeed * this.twinkleDirection;
+        if (this.opacity > 0.8 || this.opacity < 0.2) {
+          this.twinkleDirection *= -1;
+        }
       }
       draw() {
         ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
@@ -264,6 +325,7 @@ function App() {
     const init = () => {
       particles = [];
       ripples = [];
+      shootingStars = [];
       const particleCount = window.innerWidth < 768 ? 80 : 180;
       for (let i = 0; i < particleCount; i++) {
         particles.push(new Particle());
@@ -272,6 +334,17 @@ function App() {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      if (Math.random() < 0.003) {
+        shootingStars.push(new ShootingStar());
+      }
+      
+      shootingStars.forEach((star, index) => {
+        star.update();
+        star.draw();
+        if (star.opacity <= 0) shootingStars.splice(index, 1);
+      });
+      
       particles.forEach(p => { p.update(); p.draw(); });
       ripples.forEach((r, index) => {
         r.update(); r.draw();
@@ -317,6 +390,12 @@ function App() {
     };
   }, []);
 
+  const skills = [
+    'Python', 'Java', 'C++', 'TypeScript',
+    'React', 'Next.js', 'FastAPI', 'SQL',
+    'Docker', 'Linux', 'Git', 'Figma'
+  ];
+
   return (
     <div className="relative min-h-screen bg-black text-gray-300 selection:bg-white selection:text-black overflow-x-hidden">
       
@@ -325,6 +404,12 @@ function App() {
         ref={canvasRef} 
         className="fixed top-0 left-0 w-full h-full pointer-events-none z-0"
       />
+
+      {/* Nebula Glow Effect */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[150px]"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[150px]"></div>
+      </div>
 
       {/* PDF POPUP MODAL */}
       <AnimatePresence>
@@ -355,9 +440,10 @@ function App() {
               
               <div className="flex flex-col gap-8 text-center">
                 <NavItem href="#home" onClick={() => setMobileMenuOpen(false)}>Home</NavItem>
+                <NavItem href="#projects" onClick={() => setMobileMenuOpen(false)}>Projects</NavItem>
+                <NavItem href="#skills" onClick={() => setMobileMenuOpen(false)}>Skills</NavItem>
                 <NavItem href="#education" onClick={() => setMobileMenuOpen(false)}>Logs</NavItem>
                 <NavItem href="#awards" onClick={() => setMobileMenuOpen(false)}>Honors</NavItem>
-                <NavItem href="#projects" onClick={() => setMobileMenuOpen(false)}>Projects</NavItem>
                 <NavItem href="#contact" onClick={() => setMobileMenuOpen(false)}>Contact</NavItem>
               </div>
           </motion.div>
@@ -367,12 +453,13 @@ function App() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
-          <div className="text-white text-lg font-bold tracking-[0.3em]">AVA_YUNUS</div>
+          <a href="#home" className="text-white text-lg font-bold tracking-[0.3em] hover:opacity-80 transition-opacity">AVA_YUNUS</a>
           <div className="hidden md:flex gap-8">
             <NavItem href="#home">Home</NavItem>
+            <NavItem href="#projects">Projects</NavItem>
+            <NavItem href="#skills">Skills</NavItem>
             <NavItem href="#education">Logs</NavItem>
             <NavItem href="#awards">Honors</NavItem>
-            <NavItem href="#projects">Projects</NavItem>
             <NavItem href="#contact">Contact</NavItem>
           </div>
           {/* MOBILE MENU BUTTON (UPDATED) */}
@@ -395,7 +482,7 @@ function App() {
         >
           
           <div className="relative inline-block mb-6">
-            <h1 className="text-4xl md:text-8xl text-white font-thin tracking-widest">
+            <h1 className="text-4xl md:text-8xl text-white font-thin tracking-widest hero-glow">
               AVA YUNUS
             </h1>
             <span className="hidden md:block absolute top-1/2 left-full -translate-y-1/2 ml-8 text-lg text-gray-600 tracking-[0.2em] font-normal border border-gray-800 px-3 py-1 rounded-full bg-white/5 whitespace-nowrap hover:border-gray-600 transition-colors cursor-help" title="Pronounced like 'Lava'">
@@ -417,16 +504,16 @@ function App() {
               /* CHANGED: Adjusted text size and tracking for mobile to prevent cutoff */
               className="text-[10px] md:text-sm text-gray-400 max-w-lg mx-auto leading-loose tracking-widest md:tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden border-r-2 border-white pr-2"
             >
-              Software Engineer <span className="text-white mx-1 md:mx-2">|</span> Student <span className="text-white mx-1 md:mx-2">|</span> Minimalist
+              Software Engineer <span className="text-white mx-1 md:mx-2">|</span> Builder <span className="text-white mx-1 md:mx-2">|</span> Minimalist
             </motion.p>
           </div>
           
           <div className="flex flex-col md:flex-row justify-center items-center gap-6">
             <div className="flex gap-4">
-              <a href="https://linkedin.com/in/avayunus" target="_blank" className="p-3 border border-white/20 hover:border-white hover:bg-white hover:text-black transition-all duration-300 rounded-full">
+              <a href="https://linkedin.com/in/avayunus" target="_blank" rel="noopener noreferrer" className="p-3 border border-white/20 hover:border-white hover:bg-white hover:text-black transition-all duration-300 rounded-full">
                 <Linkedin size={20} />
               </a>
-              <a href="https://github.com/avayunus" target="_blank" className="p-3 border border-white/20 hover:border-white hover:bg-white hover:text-black transition-all duration-300 rounded-full">
+              <a href="https://github.com/avayunus" target="_blank" rel="noopener noreferrer" className="p-3 border border-white/20 hover:border-white hover:bg-white hover:text-black transition-all duration-300 rounded-full">
                 <Github size={20} />
               </a>
             </div>
@@ -449,125 +536,122 @@ function App() {
         </motion.div>
       </section>
 
+      {/* Projects Section */}
+      <Section id="projects" title="01_PROJECTS">
+        <div className="grid md:grid-cols-2 gap-6">
+          <ProjectCard 
+            title="VIGIL" 
+            link="https://github.com/avayunus/Vigil"
+            desc="Real-time global event monitor with interactive map visualization. Aggregates data from GDELT and major news RSS feeds using a FastAPI backend." 
+            tags={['Next.js', 'FastAPI', 'Python', 'Leaflet']}
+            featured={true}
+          />
+          <ProjectCard 
+            title="SCHOLAR AI" 
+            link="https://github.com/avayunus/Scholar"
+            desc="RAG-based study assistant that processes and summarizes academic documents using large language models and vector embeddings." 
+            tags={['LangChain', 'Python', 'AI']} 
+          />
+          <ProjectCard 
+            title="AI COUNCIL" 
+            link="https://github.com/avayunus/ai_council"
+            desc="Multi-agent debate system where different AI personas argue perspectives before synthesizing a final consensus answer." 
+            tags={['LLM', 'System Design']} 
+          />
+          <ProjectCard 
+            title="ZERO TRACKER" 
+            link="https://github.com/avayunus/ZeroTracker"
+            desc="Lightweight Valorant stats tracker focused on essential metrics. No ads, no bloat, just clean data." 
+            tags={['Python', 'API', 'Minimal']} 
+          />
+          <ProjectCard 
+            title="JUST NOTES" 
+            link="https://github.com/avayunus/JustNotes"
+            desc="Distraction-free note-taking app built for speed. Supports markdown with instant preview." 
+            tags={['React', 'Minimal', 'Markdown']} 
+          />
+          <ProjectCard 
+            title="FLEXX FITNESS" 
+            link="https://github.com/avayunus/FlexxFitness"
+            desc="Full-stack fitness tracker with workout logging and progress visualization. Reduced onboarding friction by 20% through UX iteration." 
+            tags={['Java', 'SQL', 'App Dev']} 
+          />
+          <ProjectCard 
+            title="PASS STRENGTH" 
+            link="https://github.com/avayunus/password_strength_tool"
+            desc="Security tool that estimates brute-force crack time for passwords based on entropy analysis and common attack patterns." 
+            tags={['Security', 'Algorithms']} 
+          />
+          <ProjectCard 
+            title="ROBORAMA BOT" 
+            desc="Autonomous line-following robot using PID control for stable navigation through complex track patterns." 
+            tags={['C++', 'Embedded', 'Robotics']} 
+          />
+          <ProjectCard 
+            title="PLANT SYSTEM" 
+            desc="IoT-based automatic plant watering system with soil moisture detection and scheduled irrigation." 
+            tags={['Java', 'IoT', 'Hardware']} 
+          />
+          <ProjectCard 
+            title="PORTFOLIO" 
+            link="https://github.com/avayunus/portfolio-2025"
+            desc="This site. A modular React portfolio with particle animations and minimalist design principles." 
+            tags={['React', 'Tailwind', 'Framer']} 
+          />
+        </div>
+      </Section>
+
+      {/* Skills Section */}
+      <Section id="skills" title="02_SKILLS">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {skills.map((skill, index) => (
+            <SkillBadge key={skill} skill={skill} index={index} />
+          ))}
+        </div>
+      </Section>
+
       {/* Education Timeline */}
-      <Section id="education" title="01_LOGS">
+      <Section id="education" title="03_LOGS">
         <div className="max-w-3xl">
           <TimelineItem 
             date="2025 - Present"
             title="Software Engineering (B.Eng)"
             subtitle="York University"
-            desc="Resumed studies with a focus on intelligent systems and architecture. Relevant coursework: Advanced Algorithms, Operating Systems."
+            desc="Continuing with focus on computer architecture and intelligent systems. Currently building full-stack projects and preparing for co-op placements."
           />
           <TimelineItem 
             date="2024"
             title="Technical Sabbatical"
             subtitle="Remote / Independent"
-            desc="Took a planned leave of absence for family care. Maintained technical proficiency through part-time work and independent development of AI-driven tools like Scholar and Zero Tracker."
+            desc="Planned leave for family responsibilities. Stayed sharp through independent projects including Scholar AI and Zero Tracker."
           />
            <TimelineItem 
             date="2021 - 2023"
             title="Software Engineering (B.Eng)"
             subtitle="York University"
-            desc="Started rigorous engineering curriculum. Built foundational knowledge in data structures, OOP, and system design."
+            desc="Core engineering curriculum covering data structures, algorithms, OOP, and system design fundamentals."
           />
         </div>
       </Section>
 
       {/* Achievements Section */}
-      <Section id="awards" title="02_HONORS">
+      <Section id="awards" title="04_HONORS">
         <div className="max-w-3xl">
           <AchievementItem 
             title="3rd Place Winner"
             org="UNHack 2021 - BEST Lassonde"
             date="NOV 2021"
-            desc="Designed solution targeting sustainability (SDG #7) with a team of 5. Owned system thinking aspects creating modular simulations."
+            desc="Built a sustainability-focused solution targeting SDG #7 with a team of 5. Led system architecture and modular simulation design."
             pdfLink="/unhack.pdf"
             onPreview={openPdf}
           />
           <AchievementItem 
             title="Participation Award"
             org="Lassonde Roborama - Robotics Society"
-            date="JAN 14, 2023"
-            desc="Participated in the autonomous robotics competition. Programmed movement logic using PID-style tuning to optimize stability."
+            date="JAN 2023"
+            desc="Competed in autonomous robotics challenge. Implemented PID-tuned movement logic for stable line-following performance."
             pdfLink="/roborama.pdf"
             onPreview={openPdf}
-          />
-        </div>
-      </Section>
-
-      {/* Skills Section */}
-      <Section id="skills" title="03_SKILLS">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            'Java', 'C++', 'Python', 'C#', 
-            'React', 'Next.js', 'SQL', 'Docker',
-            'Linux', 'Git', 'Bash', 'Figma'
-          ].map((skill, index) => (
-            <motion.div 
-              key={index}
-              whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
-              className="border border-white/10 p-6 text-center hover:border-white transition-all duration-300 cursor-default"
-            >
-              <span className="text-xs tracking-[0.2em] text-gray-300">{skill}</span>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Projects Section */}
-      <Section id="projects" title="04_PROJECTS">
-        <div className="grid md:grid-cols-2 gap-6">
-          <ProjectCard 
-            title="JUST NOTES" 
-            link="https://github.com/avayunus/JustNotes"
-            desc="A clean, distraction-free note-taking application designed for speed and simplicity." 
-            tags={['React', 'Minimal', 'Markdown']} 
-          />
-          <ProjectCard 
-            title="ZERO TRACKER" 
-            link="https://github.com/avayunus/ZeroTracker"
-            desc="A lightweight, bloat-free Valorant tracker that provides essential player metrics without the ads or heavy resource usage." 
-            tags={['Python', 'API', 'Minimal']} 
-          />
-          <ProjectCard 
-            title="SCHOLAR AI" 
-            link="https://github.com/avayunus/Scholar"
-            desc="RAG-based study assistant utilizing LLMs to help process and summarize complex academic documents." 
-            tags={['LangChain', 'Python', 'AI']} 
-          />
-           <ProjectCard 
-            title="AI COUNCIL" 
-            link="https://github.com/avayunus/ai_council"
-            desc="Multi-agent system where different AI personas debate before providing a finalized answer." 
-            tags={['LLM', 'System Design']} 
-          />
-          <ProjectCard 
-            title="FLEXX FITNESS" 
-            link="https://github.com/avayunus/FlexxFitness"
-            desc="Comprehensive fitness tracking application with database integration. Reduced onboarding friction by 20% through UX iteration." 
-            tags={['Java', 'SQL', 'App Dev']} 
-          />
-           <ProjectCard 
-            title="PASS STRENGTH" 
-            link="https://github.com/avayunus/password_strength_tool"
-            desc="A security tool that estimates the time required to brute-force crack a given password." 
-            tags={['Security', 'Algorithms']} 
-          />
-          <ProjectCard 
-            title="ROBORAMA BOT" 
-            desc="Autonomous line-following robot using PID control algorithms to navigate complex track patterns." 
-            tags={['C++', 'Embedded', 'Robotics']} 
-          />
-           <ProjectCard 
-            title="PLANT SYSTEM" 
-            desc="Automated plant watering system detecting soil dryness and automating watering with efficient sensor usage." 
-            tags={['Java', 'IoT', 'Hardware']} 
-          />
-          <ProjectCard 
-            title="PORTFOLIO SYSTEM" 
-            link="https://github.com/avayunus"
-            desc="A living UX portfolio designed as a reusable UI system. Built to showcase iterative projects and minimalist design principles." 
-            tags={['React', 'Tailwind', 'UX']} 
           />
         </div>
       </Section>
@@ -629,7 +713,7 @@ function App() {
       </Section>
 
       <footer className="py-12 text-center text-[10px] text-gray-800 tracking-[0.3em] uppercase">
-        Designed by Ava Yunus &copy; 2025
+        Designed by Ava Yunus &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );

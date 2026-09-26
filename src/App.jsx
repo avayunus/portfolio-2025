@@ -636,11 +636,17 @@ function App() {
       {/* Education Timeline */}
       <Section id="education" title="03_LOGS">
         <div className="max-w-3xl">
+          <TimelineItem
+            date="Fall 2026 - Present"
+            title="Robotics Intern"
+            subtitle="Canadian Space Agency | Space Exploration | Longueuil, QC"
+            desc="Supporting robotics development for the Canadian Lunar Rover mission, with work involving rovers and sensors such as lidar and cameras. Also supporting a map-based mission planning tool for evaluating rover routes against lighting, communications, power, and operational constraints."
+          />
           <TimelineItem 
             date="2025 - Present"
             title="Software Engineering (B.Eng)"
             subtitle="York University"
-            desc="Continuing with focus on computer architecture and intelligent systems. Currently building full-stack projects and preparing for co-op placements."
+            desc="Continuing with focus on computer architecture and intelligent systems. Building full-stack projects alongside a robotics co-op at the Canadian Space Agency."
           />
           <TimelineItem 
             date="2024"
